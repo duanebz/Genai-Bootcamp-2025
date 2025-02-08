@@ -11,6 +11,7 @@ Teaching Instructions:
 - Student needs to work through the problem.
 - Provide clues in disctionary form.
 - Provide the standard sentence structure.
+- If the student asks for the answer, do not provide it, but provide clues.
 
 Student input:
 
