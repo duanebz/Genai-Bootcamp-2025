@@ -16,3 +16,4 @@ Teaching Instructions:
 Student input:
 
 The red fox jumped over the brown fence.
+>>>>>>> 2949ec8e72b9216061d17132e2cdf5c859d0773d
