@@ -9,49 +9,65 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useNavigation } from '@/context/NavigationContext'
-import { createStudySession } from '@/services/api'
+import { createStudySession } from '../services/api'
+import { Loader2 } from 'lucide-react'
 
-type Group = {
-  id: number
-  name: string
-}
+const API_BASE_URL = 'http://localhost:5000'
 
-type StudyActivity = {
+interface StudyActivity {
   id: number
   title: string
   launch_url: string
   preview_url: string
 }
 
-type LaunchData = {
+interface Group {
+  id: number
+  name: string
+}
+
+interface LaunchData {
   activity: StudyActivity
   groups: Group[]
 }
 
-export default function StudyActivityLaunch() {
-  const { id } = useParams()
+interface StudyActivityLaunchProps {
+  onStart?: () => void
+}
+
+export default function StudyActivityLaunch({ onStart }: StudyActivityLaunchProps) {
+  const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { setCurrentStudyActivity } = useNavigation()
   const [launchData, setLaunchData] = useState<LaunchData | null>(null)
   const [selectedGroup, setSelectedGroup] = useState<string>('')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
 
   useEffect(() => {
-    fetch(`http://localhost:5000/api/study-activities/${id}/launch`)
-      .then(response => {
-        if (!response.ok) throw new Error('Failed to fetch launch data')
-        return response.json()
-      })
-      .then(data => {
+    const fetchLaunchData = async () => {
+      if (!id) {
+        setError(new Error('No activity ID provided'))
+        setIsLoading(false)
+        return
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/study-activities/${id}/launch`)
+        if (!response.ok) {
+          throw new Error(response.status === 404 ? 'Activity not found' : 'Failed to fetch launch data')
+        }
+        const data = await response.json()
         setLaunchData(data)
         setCurrentStudyActivity(data.activity)
-        setLoading(false)
-      })
-      .catch(err => {
-        setError(err.message)
-        setLoading(false)
-      })
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Failed to load launch data'))
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchLaunchData()
   }, [id, setCurrentStudyActivity])
 
   // Clean up when unmounting
@@ -62,38 +78,57 @@ export default function StudyActivityLaunch() {
   }, [setCurrentStudyActivity])
 
   const handleLaunch = async () => {
-    if (!launchData?.activity || !selectedGroup) return;
+    if (!launchData?.activity || !selectedGroup) return
     
     try {
+      setIsLoading(true)
       // Create a study session first
-      const result = await createStudySession(parseInt(selectedGroup), launchData.activity.id);
-      const sessionId = result.session_id;
+      const result = await createStudySession(parseInt(selectedGroup), launchData.activity.id)
+      const sessionId = result.session_id
       
       // Replace any instances of $group_id with the actual group id and add session_id
-      const launchUrl = new URL(launchData.activity.launch_url);
-      launchUrl.searchParams.set('group_id', selectedGroup);
-      launchUrl.searchParams.set('session_id', sessionId.toString());
+      const launchUrl = new URL(launchData.activity.launch_url)
+      launchUrl.searchParams.set('group_id', selectedGroup)
+      launchUrl.searchParams.set('session_id', sessionId.toString())
+      
+      // Call onStart if provided
+      onStart?.()
       
       // Open the modified URL in a new tab
-      window.open(launchUrl.toString(), '_blank');
+      window.open(launchUrl.toString(), '_blank')
       
       // Navigate to the session show page
-      navigate(`/sessions/${sessionId}`);
-    } catch (error) {
-      console.error('Failed to launch activity:', error);
+      navigate(`/sessions/${sessionId}`)
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to launch activity'))
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  if (loading) {
-    return <div className="text-center">Loading...</div>
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    )
   }
 
-  if (error) {
-    return <div className="text-red-500">Error: {error}</div>
-  }
-
-  if (!launchData) {
-    return <div className="text-red-500">Activity not found</div>
+  if (error || !launchData) {
+    return (
+      <div className="text-center py-6">
+        <p className="text-red-500 mb-4">
+          {error?.message || 'Failed to load launch data'}
+        </p>
+        <Button
+          variant="link"
+          onClick={() => navigate('/activities')}
+          className="text-blue-500 hover:text-blue-600"
+        >
+          Return to Activities
+        </Button>
+      </div>
+    )
   }
 
   return (
@@ -119,10 +154,17 @@ export default function StudyActivityLaunch() {
 
         <Button 
           onClick={handleLaunch}
-          disabled={!selectedGroup}
+          disabled={!selectedGroup || isLoading}
           className="w-full"
         >
-          Launch Now
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Launching...
+            </>
+          ) : (
+            'Launch Now'
+          )}
         </Button>
       </div>
     </div>

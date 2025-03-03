@@ -3,7 +3,7 @@ from flask_cors import cross_origin
 import json
 
 def load(app):
-  @app.route('/groups', methods=['GET'])
+  @app.route('/api/groups', methods=['GET'])
   @cross_origin()
   def get_groups():
     try:
@@ -58,7 +58,7 @@ def load(app):
     except Exception as e:
       return jsonify({"error": str(e)}), 500
 
-  @app.route('/groups/<int:id>', methods=['GET'])
+  @app.route('/api/groups/<int:id>', methods=['GET'])
   @cross_origin()
   def get_group(id):
     try:
@@ -83,7 +83,7 @@ def load(app):
     except Exception as e:
       return jsonify({"error": str(e)}), 500
 
-  @app.route('/groups/<int:id>/words', methods=['GET'])
+  @app.route('/api/groups/<int:id>/words', methods=['GET'])
   @cross_origin()
   def get_group_words(id):
     try:
@@ -155,9 +155,42 @@ def load(app):
     except Exception as e:
       return jsonify({"error": str(e)}), 500
 
-  # todo GET /groups/:id/words/raw
+  # Get raw words data for a group
+  @app.route('/api/groups/<int:id>/raw', methods=['GET'])
+  @cross_origin()
+  def get_group_words_raw(id):
+    try:
+      cursor = app.db.cursor()
 
-  @app.route('/groups/<int:id>/study_sessions', methods=['GET'])
+      # First, check if the group exists
+      cursor.execute('SELECT name FROM groups WHERE id = ?', (id,))
+      group = cursor.fetchone()
+      if not group:
+        return jsonify({"error": "Group not found"}), 404
+
+      # Query to fetch all words for the group without pagination
+      cursor.execute('''
+        SELECT w.*
+        FROM words w
+        JOIN word_groups wg ON w.id = wg.word_id
+        WHERE wg.group_id = ?
+      ''', (id,))
+      
+      words = cursor.fetchall()
+
+      # Format the response as a simple array of word objects
+      words_data = []
+      for word in words:
+        words_data.append({
+          "kanji": word["kanji"],
+          "english": word["english"]
+        })
+
+      return jsonify(words_data)
+    except Exception as e:
+      return jsonify({"error": str(e)}), 500
+
+  @app.route('/api/groups/<int:id>/study_sessions', methods=['GET'])
   @cross_origin()
   def get_group_study_sessions(id):
     try:

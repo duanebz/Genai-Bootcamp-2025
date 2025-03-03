@@ -239,11 +239,12 @@ export async function fetchGroupStudySessions(
 export const fetchRecentStudySession = async (): Promise<RecentSession | null> => {
   const response = await fetch(`${API_BASE_URL}/dashboard/recent-session`);
   if (!response.ok) {
-    throw new Error('Failed to fetch recent session');
+    if (response.status === 404) {
+      return null;  // No recent session found
+    }
+    throw new Error('Failed to fetch recent study session');
   }
-  const data = await response.json();
-  console.log('Raw response from recent session:', data);
-  return data;
+  return response.json();
 };
 
 export const fetchStudyStats = async (): Promise<StudyStats> => {

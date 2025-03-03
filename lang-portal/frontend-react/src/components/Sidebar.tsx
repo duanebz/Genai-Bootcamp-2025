@@ -13,6 +13,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  useSidebar
 } from "@/components/ui/sidebar"
 
 const navItems = [
@@ -24,8 +25,9 @@ const navItems = [
   { icon: Settings, name: 'Settings', path: '/settings' },
 ]
 
-export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export default function AppSidebar() {
   const location = useLocation()
+  const { state } = useSidebar()
   
   const isActive = (path: string) => {
     // Handle root path
@@ -35,9 +37,9 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
   }
   
   return (
-    <Sidebar {...props}>
+    <Sidebar data-state={state}>
       <SidebarHeader>
-        LangPortal
+        <span className="text-lg font-semibold">LangPortal</span>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
@@ -46,8 +48,8 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.name}>
                   <SidebarMenuButton asChild isActive={isActive(item.path)}>
-                    <Link to={item.path}>
-                      <item.icon />
+                    <Link to={item.path} className="flex items-center gap-3 px-3 py-2">
+                      <item.icon className="h-5 w-5" />
                       <span>{item.name}</span>
                     </Link>
                   </SidebarMenuButton>
