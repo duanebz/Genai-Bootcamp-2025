@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Adventure Experience - Enhanced Parallax Demo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            color: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        h1 {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .parallax-container {
+            position: relative;
+            width: 768px;
+            height: 432px;
+            overflow: hidden;
+            margin: 20px auto;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            perspective: 1000px;
+        }
+        
+        .parallax-layers {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+            transition: transform 0.05s ease-out;
+        }
+        
+        .layer {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+        }
+        
+        .instructions {
+            max-width: 768px;
+            margin: 20px auto;
+            padding: 15px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>AI Adventure Experience - Enhanced Parallax Demo</h1>
+    
+    <div class="instructions">
+        <p>Move your mouse over the image to see the enhanced parallax effect!</p>
+        <p>This demo uses the depth map to create multiple layers for a more realistic 3D effect.</p>
+    </div>
+    
+    <div class="parallax-container" id="parallax">
+        <div class="parallax-layers" id="layers"></div>
+    </div>
+    
+    <div class="controls">
+        <button id="toggle-depth">Show Depth Map</button>
+        <button id="increase-effect">Increase Effect</button>
+        <button id="decrease-effect">Decrease Effect</button>
+    </div>
+    
+    <script>
+        const parallaxContainer = document.getElementById('parallax');
+        const layersContainer = document.getElementById('layers');
+        const toggleDepthBtn = document.getElementById('toggle-depth');
+        const increaseEffectBtn = document.getElementById('increase-effect');
+        const decreaseEffectBtn = document.getElementById('decrease-effect');
+        
+        let showingDepth = false;
+        let effectStrength = 30;
+        let layers = [];
+        const NUM_LAYERS = 10;
+        
+        // Load images
+        const baseImage = new Image();
+        baseImage.src = 'results/original_image.png';
+        
+        const depthMap = new Image();
+        depthMap.src = 'results/depth_map.png';
+        
+        // Create canvas for depth map analysis
+        const depthCanvas = document.createElement('canvas');
+        const depthCtx = depthCanvas.getContext('2d');
+        
+        // Wait for both images to load
+        Promise.all([
+            new Promise(resolve => baseImage.onload = resolve),
+            new Promise(resolve => depthMap.onload = resolve)
+        ]).then(() => {
+            // Set up depth map analysis
+            depthCanvas.width = depthMap.width;
+            depthCanvas.height = depthMap.height;
+            depthCtx.drawImage(depthMap, 0, 0);
+            
+            // Create layers
+            createLayers();
+            
+            // Set up event listeners
+            setupEventListeners();
+        });
+        
+        function createLayers() {
+            // Clear existing layers
+            layersContainer.innerHTML = '';
+            layers = [];
+            
+            // Create layers based on depth
+            for (let i = 0; i < NUM_LAYERS; i++) {
+                const layer = document.createElement('div');
+                layer.className = 'layer';
+                layer.style.backgroundImage = `url('results/original_image.png')`;
+                layer.style.transform = `translateZ(${-i * 50}px) scale(${1 + i * 0.1})`;
+                layer.style.opacity = i === 0 ? 1 : 0.9 - (i * 0.1);
+                
+                layersContainer.appendChild(layer);
+                layers.push(layer);
+            }
+        }
+        
+        function setupEventListeners() {
+            // Mouse movement for parallax effect
+            parallaxContainer.addEventListener('mousemove', (e) => {
+                const rect = parallaxContainer.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / rect.width;
+                const y = (e.clientY - rect.top) / rect.height;
+                
+                // Calculate rotation based on mouse position
+                const rotateY = (x - 0.5) * effectStrength;
+                const rotateX = (y - 0.5) * -effectStrength;
+                
+                // Apply rotation to layers container
+                layersContainer.style.transform = `rotateY(${rotateY}deg) rotateX(${rotateX}deg)`;
+            });
+            
+            // Reset on mouse leave
+            parallaxContainer.addEventListener('mouseleave', () => {
+                layersContainer.style.transform = 'rotateY(0deg) rotateX(0deg)';
+            });
+            
+            // Toggle depth map view
+            toggleDepthBtn.addEventListener('click', () => {
+                showingDepth = !showingDepth;
+                
+                if (showingDepth) {
+                    layers[0].style.backgroundImage = `url('results/depth_map.png')`;
+                    toggleDepthBtn.textContent = 'Show Original';
+                } else {
+                    layers[0].style.backgroundImage = `url('results/original_image.png')`;
+                    toggleDepthBtn.textContent = 'Show Depth Map';
+                }
+            });
+            
+            // Adjust effect strength
+            increaseEffectBtn.addEventListener('click', () => {
+                effectStrength = Math.min(effectStrength + 10, 100);
+            });
+            
+            decreaseEffectBtn.addEventListener('click', () => {
+                effectStrength = Math.max(effectStrength - 10, 10);
+            });
+        }
+    </script>
+</body>
+</html>
